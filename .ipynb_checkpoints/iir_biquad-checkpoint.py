@@ -49,7 +49,7 @@ def test():
 def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
     if ics is None:
         # Debugging
-        print("No initial conditions!")
+        #Lprint("No initial conditions!")
         ics = np.zeros(samp_per_clock*3)
         ics = ics.reshape(3,-1)
 
@@ -68,10 +68,10 @@ def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
     # Note f_fir[0]/g_fir[0] are going to both be 1
 
     # Debugging.
-    print("Magnitude:", mag, "Angle:", angle)
-    print("f/g FIRs are calculated only for sample 0 and sample 1 respectively.")
-    print("f FIR:", f_fir)
-    print("g FIR:", g_fir)
+    #Lprint("Magnitude:", mag, "Angle:", angle)
+    #Lprint("f/g FIRs are calculated only for sample 0 and sample 1 respectively.")
+    #Lprint("f FIR:", f_fir)
+    #Lprint("g FIR:", g_fir)
 
     # Expand the inputs with the initial conditions
     newins = np.concatenate( (ics[0],ins) )
@@ -101,13 +101,13 @@ def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
     Coeff_f_in_G = pow(mag, samp_per_clock+1)*eval_chebyu(samp_per_clock-1, np.cos(angle))
     
     # Debugging
-    print("F/G FIRs operate on f/g inputs respectively")
-    print("F FIR:", F_fir, "+g*", Coeff_g_in_F)
-    print("G FIR:", G_fir, "-f*", Coeff_f_in_G)
-    print()
-    print("As full FIRs calculated only for sample 0 and 1 respectively:")
-    print("F = f + (fz^-", samp_per_clock, ")+",Coeff_g_in_F,"*(gz^-", samp_per_clock-1, ")",sep='')
-    print("G = g + (gz^-", samp_per_clock, ")-",Coeff_f_in_G,"*(fz^-", samp_per_clock+1, ")",sep='')
+    #Lprint("F/G FIRs operate on f/g inputs respectively")
+    #Lprint("F FIR:", F_fir, "+g*", Coeff_g_in_F)
+    #Lprint("G FIR:", G_fir, "-f*", Coeff_f_in_G)
+    #Lprint()
+    #Lprint("As full FIRs calculated only for sample 0 and 1 respectively:")
+    #Lprint("F = f + (fz^-", samp_per_clock, ")+",Coeff_g_in_F,"*(gz^-", samp_per_clock-1, ")",sep='')
+    #Lprint("G = g + (gz^-", samp_per_clock, ")-",Coeff_f_in_G,"*(fz^-", samp_per_clock+1, ")",sep='')
         
     # Filter them
     F = signal.lfilter( F_fir, [1], f )
@@ -144,12 +144,12 @@ def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
                                        pow(eval_chebyu(samp_per_clock-1, np.cos(angle)), 2))
 
     # Debugging
-    print("Update step (matrix) coefficients:", C)
-    print("As an IIR:")
-    print("y[0] =", C[1], "*z^-", samp_per_clock*2-1," + ", C[0], "*z^-", samp_per_clock*2,
-          "+F[0]",sep='')
-    print("y[1] =", C[3], "*z^-", samp_per_clock*2," + ", C[2], "*z^-", samp_per_clock*2+1,
-          "+G[1]",sep='')
+    #Lprint("Update step (matrix) coefficients:", C)
+    #Lprint("As an IIR:")
+    #Lprint("y[0] =", C[1], "*z^-", samp_per_clock*2-1," + ", C[0], "*z^-", samp_per_clock*2,
+          #L"+F[0]",sep='')
+    #Lprint("y[1] =", C[3], "*z^-", samp_per_clock*2," + ", C[2], "*z^-", samp_per_clock*2+1,
+          #L"+G[1]",sep='')
     # Now compute the IIR.
     # INITIAL CONDITIONS STEP
     y0_0 =  C[0]*ics[1][0] + C[1]*ics[1][1] + F[0]
