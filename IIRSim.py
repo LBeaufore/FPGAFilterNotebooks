@@ -322,7 +322,7 @@ def iir_biquad_run(ins, coeffs, samp_per_clock=8, ics=None, manual_filter=False,
     return output 
 
 
-def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_filter=False, decimate=True, mag=0, angle=0, fixed_point=False, debug=0):
+def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_filter=False, decimate=True, a1=0, a2=0, fixed_point=False, debug=0):
     if ics is None:
         # Debugging
         if debug>1:
@@ -482,7 +482,11 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
             if decimate:
                 arr[j][i] = 0# DEBUG
             else:
-                arr[j][i] += 2*mag*np.cos(angle)*arr[j-1][i] - pow(mag, 2)*arr[j-2][i]
+                # print(a1)\
+                arr[j][i] +=  -1*(a1*np.right_shift(arr[j-1][i],0) + a2*np.right_shift(arr[j-2][i],0))
+                # arr[j][i] +=  -1*(a1*np.right_shift(arr_intermediate[j-1][i],13) + a2*np.right_shift(arr_intermediate[j-2][i],13))
+                # arr_intermediate[j][i] -= a1*np.right_shift(arr_intermediate[j-1][i],0) + a2*np.right_shift(arr_intermediate[j-2][i],0)
+                # arr[j][i] = (arr_intermediate[j][i])/(2**13)
     # print(arr)
     # now transpose arr and flatten
     output = arr.transpose().reshape(-1) 
