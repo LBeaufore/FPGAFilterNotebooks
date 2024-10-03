@@ -382,7 +382,7 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
     # F = (fir on f) + G_coeff*g(previous clock)
     # G = (fir on g) + F_coeff*f(previous clock)
     
-    F_fir = [ 2**14, D_FF ] # This is for sample 0
+    F_fir = [ 2**14, D_FF ] # This is for sample 0 # WAS 2**14
     G_fir = [ 2**14, E_GG ] # This is for sample 1
 
     
@@ -447,16 +447,20 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
             arr_intermediate[1][i] = np.int64(C[2]*y0_1 + C[3]*y1_1 + G[i])
         else:
             # THIS IS THE ONLY RECURSIVE STEP
-            arr_intermediate[0][i] = np.int64(C[0]*arr_intermediate[0][i-2] + C[1]*arr_intermediate[1][i-2] + np.left_shift(F[i],0)) #TODO NEED TO ADD 30 BIT LIMIT!!! TODO 17.13
-            arr_intermediate[1][i] = np.int64(C[2]*arr_intermediate[0][i-2] + C[3]*arr_intermediate[1][i-2] + np.left_shift(G[i],0))
+            # FIRS come in in Q21.27, but were multiplied by Q
+            # A regiter has 13 fractional bits
+            # B register (Coefficient) has 14 fractional bits
+            # C register (fir add) therefore has to be 27 to match, but was multiplied by Q4.14 coefficients twice.
+            arr_intermediate[0][i] = np.int64(C[0]*np.right_shift(arr_intermediate[0][i-2],0) + C[1]*np.right_shift(arr_intermediate[1][i-2],0) + np.right_shift(F[i],1))#1 The A register (the feedback) has 13 Fractional bits. The FIRs went through 2 rounds of 14 fractional bit coeffs, and only had one removed
+            arr_intermediate[1][i] = np.int64(C[2]*np.right_shift(arr_intermediate[0][i-2],0) + C[3]*np.right_shift(arr_intermediate[1][i-2],0) + np.right_shift(G[i],1))
             
             # if(F[i] != 0 or G[i] != 0):
-        arr[0][i] = np.right_shift(arr_intermediate[0][i],14*2)
-        arr[1][i] = np.right_shift(arr_intermediate[1][i],14*2)
-        arr_intermediate[0][i] = np.right_shift(arr_intermediate[0][i],15)
-        arr_intermediate[1][i] = np.right_shift(arr_intermediate[1][i],15)
+        arr[0][i] = np.right_shift(arr_intermediate[0][i],27)
+        arr[1][i] = np.right_shift(arr_intermediate[1][i],27)
+        arr_intermediate[0][i] = np.right_shift(arr_intermediate[0][i],14)#14
+        arr_intermediate[1][i] = np.right_shift(arr_intermediate[1][i],14)
 
-        if(arr[0][i]!=0 or arr[1][i]!=0):#arr[0][i-2]>0 or arr[1][i-2]>0):
+        if(arr[0][i]!=0 or arr[1][i]!=0 or True):#arr[0][i-2]>0 or arr[1][i-2]>0):
             if (debug>0):
                 print("C[0]: %s"%C[0])
                 print("C[1]: %s"%C[1])
