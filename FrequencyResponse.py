@@ -6,22 +6,22 @@ from functools import reduce
 from scipy import signal
 from IIRSim import *
 
-def sample_generator(frequency, n_samples=8*8, m=8, flatten=False, phase=0):
+def sample_generator(frequency, n_samples=8*8, m=8, flatten=False, phase=0, in_amplitude=1.0):
     """Generate n_samples at a given frequency, with m parallelization"""
     indicies = np.arange(n_samples)
     indicies = indicies.reshape(int(n_samples/m), m)
-    values = np.cos((np.pi*frequency)*indicies + phase)
+    values = np.cos((np.pi*frequency)*indicies + phase)*in_amplitude
     if flatten:
         values = values.flatten()
         indicies = indicies.flatten()
     return values
 
-def quantized_sample_generator(frequency, n_samples=8*8, m=8, phase=0):
+def quantized_sample_generator(frequency, n_samples=8*8, m=8, phase=0, in_amplitude=1.0):
     """Generate n_samples at a given frequency, with m parallelization, and then quantize"""
-    raw_values = sample_generator(frequency, n_samples=n_samples, m=m, flatten=True, phase=0)
+    raw_values = sample_generator(frequency, n_samples=n_samples, m=m, flatten=True, phase=0, in_amplitude=in_amplitude)
     q_values = raw_values *  (2**12)
     q_values = np.array(np.floor(q_values),dtype=np.int64)
-    q_values = np.left_shift(q_values, 4)
+    # q_values = np.left_shift(q_values, 4)
     return q_values
 
 def eqn_from_zeros(zeros=[1J, -1J]):
@@ -40,7 +40,7 @@ def power_ratio(values, values_filtered):
 def amp_ratio(values, values_filtered):
     return (np.sum(np.abs(values_filtered)))/(np.sum(np.abs(values)))
 
-def eval_biquad_filter_DFT(zradius, zfreq, pradius, pfreq, sample_freqs, internal_samples=8*100, amplitude=False, phase=0, quantized=True):
+def eval_biquad_filter_DFT(zradius, zfreq, pradius, pfreq, sample_freqs, internal_samples=8*100, amplitude=False, phase=0, quantized=True, in_amplitude=1.0):
     n_samples=internal_samples
     topzero=zradius*complex(np.cos(zfreq),np.sin(zfreq))
     botzero=topzero.conjugate()    
@@ -50,10 +50,13 @@ def eval_biquad_filter_DFT(zradius, zfreq, pradius, pfreq, sample_freqs, interna
     window = np.hanning(n_samples)
     for freq_i in sample_freqs:
         if quantized:
-            values = quantized_sample_generator(freq_i, n_samples=n_samples, m=1, phase=phase) 
+            values = quantized_sample_generator(freq_i, n_samples=n_samples, m=1, phase=phase, in_amplitude=in_amplitude) 
         else:
-            values = sample_generator(freq_i, n_samples=n_samples, m=1, flatten=True, phase=phase)
-        values = np.multiply(window, values)
+            values = sample_generator(freq_i, n_samples=n_samples, m=1, flatten=True, phase=phase, in_amplitude=in_amplitude)
+        # values = np.multiply(window, values)
+        values = np.append(np.multiply(window, values), np.zeros(8*4)) # The padding at the end is to deal with latency
+        if quantized:
+            values = np.floor(values)
         fft_result = np.fft.fft(values)
         values_filtered = scipy.signal.lfilter(eqn_from_zeros([topzero, botzero]),eqn_from_zeros([toppole,botpole]),values)        
         fft_filter_result = np.fft.fft(values_filtered)
@@ -66,7 +69,7 @@ def eval_biquad_filter_DFT(zradius, zfreq, pradius, pfreq, sample_freqs, interna
 
     return power_ratios
 
-def eval_biquad_quantized_DFT(b, a, sample_freqs, internal_samples=8*100, amplitude=False, phase=0):
+def eval_biquad_quantized_DFT(b, a, sample_freqs, internal_samples=8*100, amplitude=False, phase=0, in_amplitude=1.0):
     """ Evaluate the frequency response of the actual biquad implementation"""
 
     # First generate the coefficients for the FPGA Biquad
@@ -99,8 +102,9 @@ def eval_biquad_quantized_DFT(b, a, sample_freqs, internal_samples=8*100, amplit
     power_ratios = []
     window = np.hanning(internal_samples)
     for freq_i in sample_freqs:
-        values = quantized_sample_generator(freq_i, n_samples=internal_samples, m=1, phase=phase) 
+        values = quantized_sample_generator(freq_i, n_samples=internal_samples, m=1, phase=phase, in_amplitude=in_amplitude) 
         values = np.append(np.multiply(window, values), np.zeros(8*4)) # The padding at the end is to deal with latency
+        values = np.floor(values)
         fft_result = np.fft.fft(values)
 
         # Apply the zeros
