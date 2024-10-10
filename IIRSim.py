@@ -60,7 +60,7 @@ def convert_to_fixed_point(a, a_int, a_frac, allow_overflow=False):
     """Converts to an integer with <a_frac> bits of of fractional representation, and <a_int> bits of integer
     i.e. Q<a_int>.<a_frac> (ARM)
     """
-    if((a>=(2**(a_int-1)) or a<-1*(2**(a_int-1))) and not allow_overflow):
+    if((a>=(2**(max(a_int-1,0))) or a<-1*(2**(max(a_int-1,0)))) and not allow_overflow):
         raise Exception("Value %s out of bounds"%a)
     # Multiply fractional bits up to integers
     # Removing digits of a twos complement goes more negative, so we mimic that in advance

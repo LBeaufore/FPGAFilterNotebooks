@@ -16,10 +16,12 @@ def sample_generator(frequency, n_samples=8*8, m=8, flatten=False, phase=0, in_a
         indicies = indicies.flatten()
     return values
 
-def quantized_sample_generator(frequency, n_samples=8*8, m=8, phase=0, in_amplitude=1.0):
+def quantized_sample_generator(frequency, n_samples=8*8, m=8, phase=0, in_amplitude=0.9999999999999):
     """Generate n_samples at a given frequency, with m parallelization, and then quantize"""
+    if(in_amplitude==1.0):
+        in_amplitude =0.9999999999999 
     raw_values = sample_generator(frequency, n_samples=n_samples, m=m, flatten=True, phase=0, in_amplitude=in_amplitude)
-    q_values = raw_values *  (2**12)
+    q_values = raw_values *  (2**11)# Cosine goes from -1 to 1, so there is already a factor of 2 here in the sign bitI
     q_values = np.array(np.floor(q_values),dtype=np.int64)
     # q_values = np.left_shift(q_values, 4)
     return q_values
