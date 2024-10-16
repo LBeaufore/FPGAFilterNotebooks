@@ -439,12 +439,12 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
     for i in range(len(arr[0])):
         if i == 0:
             # Compute from initial conditions.
-            arr_intermediate[0][i] = np.int64(C[0]*y0_0 + C[1]*y1_0 + F[i])
-            arr_intermediate[1][i] = np.int64(C[2]*y0_0 + C[3]*y1_0 + G[i])
+            arr_intermediate[0][i] = np.int64(C[0]*y0_0 + C[1]*y1_0 + np.right_shift(F[i],1))
+            arr_intermediate[1][i] = np.int64(C[2]*y0_0 + C[3]*y1_0 +np.right_shift(G[i],1))
         elif i==1:
             # Compute from initial conditions
-            arr_intermediate[0][i] = np.int64(C[0]*y0_1 + C[1]*y1_1 + F[i])
-            arr_intermediate[1][i] = np.int64(C[2]*y0_1 + C[3]*y1_1 + G[i])
+            arr_intermediate[0][i] = np.int64(C[0]*y0_1 + C[1]*y1_1 + np.right_shift(F[i],1))
+            arr_intermediate[1][i] = np.int64(C[2]*y0_1 + C[3]*y1_1 + np.right_shift(G[i],1))
         else:
             # THIS IS THE ONLY RECURSIVE STEP
             # FIRS come in in Q21.27, but were multiplied by Q
