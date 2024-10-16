@@ -462,6 +462,7 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
 
         if(arr[0][i]!=0 or arr[1][i]!=0 or True):#arr[0][i-2]>0 or arr[1][i-2]>0):
             if (debug>0):
+                print("i=%s"%i)
                 print("C[0]: %s"%C[0])
                 print("C[1]: %s"%C[1])
                 print("C[2]: %s"%C[2])
