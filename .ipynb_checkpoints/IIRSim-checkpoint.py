@@ -6,7 +6,7 @@ import scipy
 import math
 from scipy.special import eval_chebyu
 
-def import_data(file_loc, truncate=True, debug = False):
+def import_data_dep(file_loc, truncate=True, debug = False):
     captured_data = np.load(file_loc)
     input0_offset=np.argmax((np.abs(captured_data[0])>0).astype(int))
     input1_offset=np.argmax((np.abs(captured_data[1])>0).astype(int))
@@ -451,9 +451,20 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
             # A regiter has 13 fractional bits
             # B register (Coefficient) has 14 fractional bits
             # C register (fir add) therefore has to be 27 to match, but was multiplied by Q4.14 coefficients twice.
-            arr_intermediate[0][i] = np.int64(C[0]*np.right_shift(arr_intermediate[0][i-2],0) + C[1]*np.right_shift(arr_intermediate[1][i-2],0) + np.right_shift(F[i],1))#1 The A register (the feedback) has 13 Fractional bits. The FIRs went through 2 rounds of 14 fractional bit coeffs, and only had one removed
-            arr_intermediate[1][i] = np.int64(C[2]*np.right_shift(arr_intermediate[0][i-2],0) + C[3]*np.right_shift(arr_intermediate[1][i-2],0) + np.right_shift(G[i],1))
+            arr_intermediate[0][i] = np.int64(C[0]*np.right_shift(arr_intermediate[0][i-2],0)
+                                                                  + C[1]*np.right_shift(arr_intermediate[1][i-2],0)
+                                                                  + np.right_shift(F[i],1))
+            #1 The A register (the feedback) has 13 Fractional bits. The FIRs went through 2 rounds of 14 fractional bit coeffs, and only had one removed
+            arr_intermediate[1][i] = np.int64(C[2]*np.right_shift(arr_intermediate[0][i-2],0) 
+                                                                  + C[3]*np.right_shift(arr_intermediate[1][i-2],0)
+                                                                  + np.right_shift(G[i],1))
             
+            if debug >=1 and (arr_intermediate[0][i] != 0 or arr_intermediate[1][i] != 0):
+                print("Sample %d: F=%s, G=%s, arr_intermediate[0][i-2]=%s, arr_intermediate[1][i-2]=%s"%(i*8, 
+                                                                                         F[i], 
+                                                                                         G[i], 
+                                                                                         arr_intermediate[0][i-2],
+                                                                                         arr_intermediate[1][i-2]))
             # if(F[i] != 0 or G[i] != 0):
         arr[0][i] = np.right_shift(arr_intermediate[0][i],27)
         arr[1][i] = np.right_shift(arr_intermediate[1][i],27)
@@ -461,7 +472,7 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
         arr_intermediate[1][i] = np.right_shift(arr_intermediate[1][i],14)
 
         if(arr[0][i]!=0 or arr[1][i]!=0 or True):#arr[0][i-2]>0 or arr[1][i-2]>0):
-            if (debug>0):
+            if (debug>1):
                 print("i=%s"%i)
                 print("C[0]: %s"%C[0])
                 print("C[1]: %s"%C[1])
@@ -484,7 +495,7 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
                 arr[j][i] = 0# DEBUG
             else:
                 # print(a1)\
-                arr[j][i] +=  -1*(a1*np.right_shift(arr[j-1][i],0) + a2*np.right_shift(arr[j-2][i],0))
+                arr[j][i] +=  -1*(np.right_shift(a1*arr[j-1][i],14) + np.right_shift(a2*arr[j-2][i],14))
                 # arr[j][i] +=  -1*(a1*np.right_shift(arr_intermediate[j-1][i],13) + a2*np.right_shift(arr_intermediate[j-2][i],13))
                 # arr_intermediate[j][i] -= a1*np.right_shift(arr_intermediate[j-1][i],0) + a2*np.right_shift(arr_intermediate[j-2][i],0)
                 # arr[j][i] = (arr_intermediate[j][i])/(2**13)
@@ -494,6 +505,189 @@ def iir_biquad_run_fixed_point(ins, coeffs, samp_per_clock=8, ics=None, manual_f
     
     return output 
 
+
+def iir_biquad_run_fixed_point_extended(ins, coeffs, samp_per_clock=8, ics=None, manual_filter=False, decimate=True, a1=0, a2=0, fixed_point=False, debug=0, added_precision=0):
+    if ics is None:
+        # Debugging
+        if debug>1:
+            print("No initial conditions!")
+        ics = np.zeros(samp_per_clock*3)
+        ics = ics.reshape(3,-1)
+    ins = np.array(ins, dtype=np.int64)
+    coeffs = np.array(coeffs, dtype=np.int64)
+    # Expand the inputs with the initial conditions
+    newins = np.concatenate( (ics[0],ins) )
+
+    f_fir = coeffs[0:samp_per_clock-2]
+    g_fir = coeffs[samp_per_clock-2:2*samp_per_clock-3]
+    D_FF = coeffs[2*samp_per_clock-3 + 0]
+    D_FG = coeffs[2*samp_per_clock-3 + 1]
+    E_GF = coeffs[2*samp_per_clock-3 + 2]
+    E_GG = coeffs[2*samp_per_clock-3 + 3]
+    C = coeffs[2*samp_per_clock-3 + 4:2*samp_per_clock-3 + 4 + 4]
+    # print(C.dtype)
+
+    
+    if (debug>1):
+        print("f fir: %s"%f_fir)
+        print("g fir: %s"%g_fir)
+        for i in range(len(newins)):
+            if(newins[i] != 0):
+                print("newins index %s: %s"%(i, newins[i]))
+    
+    # Run the FIRs
+    if(manual_filter):
+        raise Exception("Not implemented yet")
+    else:
+        f = signal.lfilter( f_fir, [1], newins )#/(2**14) # This will treat negatives wrong if you are using twos complement
+        g = signal.lfilter( g_fir, [1], newins )#/(2**14)
+        # Now we decimate f/g by 8, because we only want the 0th and 1st samples out of 8 for each.
+    
+    f = f.reshape(-1, samp_per_clock).transpose()[0]
+    g = g.reshape(-1, samp_per_clock).transpose()[1]
+    
+    if (debug>1):
+        print("HERE 2")
+        for i in range(len(f)):
+            if(f[i] != 0):
+                print("f index %s: %s"%(i, f[i]))
+        for i in range(len(g)):
+            if(g[i] != 0):
+                print("g index %s: %s"%(i, g[i]))
+            # print("g index shifted %s: %s"%(i, g[i]/(2**14)))
+    # n.b. f[0]/g[0] are initial conditions
+
+    # f[2] (real sample 8) is calculated from 8, 7, 6, 5, 4, 3, 2.
+    # g[2] (real sample 9) is calculated from 9, 8, 7, 6, 5, 4, 3, 2.
+
+    # Now we need to compute the F and G functions, which *again* are just FIRs,
+    # however they're cross-linked, so it's a little trickier.
+    # We split it into
+    # F = (fir on f) + G_coeff*g(previous clock)
+    # G = (fir on g) + F_coeff*f(previous clock)
+    
+    F_fir = [ 2**(14+added_precision), D_FF ] # This is for sample 0 # WAS 2**14
+    G_fir = [ 2**(14+added_precision), E_GG ] # This is for sample 1
+
+    
+    if (debug>1):
+        # Debugging
+        print("F/G FIRs operate on f/g inputs respectively")
+        print("D_FF:", D_FF, " D_FG:", D_FG)
+        print("E_GG:", E_GG, " E_GF:", E_GF)
+        print()
+
+    # Filter them
+    F = signal.lfilter( F_fir, [1], f )#/(2**14) # The 14 bit shift will come later, with the lookbacks
+    G = signal.lfilter( G_fir, [1], g )#/(2**14)
+
+    # Now we need to feed the f/g paths into the opposite filter
+    # F[0]/G[0] are going to be dropped anyway.
+    F[1:] += D_FG*g[0:-1]#/(2**14)
+    G[1:] += E_GF*f[0:-1]#/(2**14)    
+
+    
+    if (debug>1):
+        print("HERE 3")
+        for i in range(len(F)):
+            if(F[i] != 0):
+                print("F index %s: %s"%(i, F[i]))
+        for i in range(len(G)):
+            if(G[i] != 0):
+                print("G index %s: %s"%(i, G[i]))
+    
+    # drop the initial conditions
+    F = np.array(np.floor(F[1:]), dtype=np.int64)
+    G = np.array(np.floor(G[1:]), dtype=np.int64)
+    
+    # Now reshape our outputs.
+    arr = np.array(ins.reshape(-1, samp_per_clock).transpose(), dtype=np.int64)
+    arr_intermediate = np.array(ins.reshape(-1, samp_per_clock).transpose(), dtype=np.int64)
+    # arr[0] is now every 0th sample (e.g. for samp_per_clock = 8, it's 0, 8, 16, 24, etc.)
+    # arr[1] is now every 1st sample (e.g. for samp_per_clock = 8, it's 1, 9, 17, 25, etc.)
+    # Debugging
+    
+    if (debug>1):
+        print("Update step (matrix) coefficients:", C)
+        print("As an IIR: (Lucas thinks there is a typo here)")
+        print("y[0] =", C[1], "*z^-", samp_per_clock*2-1," + ", C[0], "*z^-", samp_per_clock*2,
+              "+F[0]",sep='')
+        print("y[1] =", C[3], "*z^-", samp_per_clock*2," + ", C[2], "*z^-", samp_per_clock*2+1,
+              "+G[1]",sep='')
+    # Now compute the IIR.
+    # INITIAL CONDITIONS STEP
+    y0_0 =  C[0]*ics[1][0] + C[1]*ics[1][1] + F[0]
+    y1_0 =  C[2]*ics[1][0] + C[3]*ics[1][1] + G[0]
+    y0_1 =  C[0]*ics[2][0] + C[1]*ics[2][1] + F[1]
+    y1_1 =  C[2]*ics[2][0] + C[3]*ics[2][1] + G[1]
+    for i in range(len(arr[0])):
+        if i == 0:
+            # Compute from initial conditions.
+            arr_intermediate[0][i] = np.int64(C[0]*y0_0 + C[1]*y1_0 + np.right_shift(F[i],1))
+            arr_intermediate[1][i] = np.int64(C[2]*y0_0 + C[3]*y1_0 +np.right_shift(G[i],1))
+        elif i==1:
+            # Compute from initial conditions
+            arr_intermediate[0][i] = np.int64(C[0]*y0_1 + C[1]*y1_1 + np.right_shift(F[i],1))
+            arr_intermediate[1][i] = np.int64(C[2]*y0_1 + C[3]*y1_1 + np.right_shift(G[i],1))
+        else:
+            # THIS IS THE ONLY RECURSIVE STEP
+            # FIRS come in in Q21.27, but were multiplied by Q
+            # A regiter has 13 fractional bits
+            # B register (Coefficient) has 14 fractional bits
+            # C register (fir add) therefore has to be 27 to match, but was multiplied by Q4.14 coefficients twice.
+            arr_intermediate[0][i] = np.int64(C[0]*np.right_shift(arr_intermediate[0][i-2],0)
+                                              + C[1]*np.right_shift(arr_intermediate[1][i-2],0)
+                                              + np.right_shift(F[i],1))
+            #1 The A register (the feedback) has 13 Fractional bits. The FIRs went through 2 rounds of 14 fractional bit coeffs, and only had one removed
+            arr_intermediate[1][i] = np.int64(C[2]*np.right_shift(arr_intermediate[0][i-2],0)
+                                              + C[3]*np.right_shift(arr_intermediate[1][i-2],0)
+                                              + np.right_shift(G[i],1))
+            if debug >=1 and (arr_intermediate[0][i] != 0 or arr_intermediate[1][i] != 0):
+                print("Sample %d: F=%s, G=%s, arr_intermediate[0][i-2]=%s, arr_intermediate[1][i-2]=%s"%(i*8, 
+                                                                                                         F[i], 
+                                                                                                         G[i], 
+                                                                                                         arr_intermediate[0][i-2],
+                                                                                                         arr_intermediate[1][i-2]))
+            
+            # if(F[i] != 0 or G[i] != 0):
+        arr[0][i] = np.right_shift(arr_intermediate[0][i],27+added_precision)
+        arr[1][i] = np.right_shift(arr_intermediate[1][i],27+added_precision)
+        arr_intermediate[0][i] = np.right_shift(arr_intermediate[0][i],14+added_precision)#14
+        arr_intermediate[1][i] = np.right_shift(arr_intermediate[1][i],14+added_precision)
+
+        if(arr[0][i]!=0 or arr[1][i]!=0 or True):#arr[0][i-2]>0 or arr[1][i-2]>0):
+            if (debug>1):
+                print("i=%s"%i)
+                print("C[0]: %s"%C[0])
+                print("C[1]: %s"%C[1])
+                print("C[2]: %s"%C[2])
+                print("C[3]: %s"%C[3])
+                print("arr_intermediate[0][i-2]: %s"%arr_intermediate[0][i-2])
+                print("arr_intermediate[1][i-2]: %s"%arr_intermediate[1][i-2])          
+                print("F[%s]: %s"%(i,F[i]))
+                print("G[%s]: %s"%(i,G[i]))
+                print("arr_intermediate[0][i]: %s"%(arr_intermediate[0][i]))
+                print("arr_intermediate[1][i]: %s"%(arr_intermediate[1][i]))
+                print("arr[0][i] after: %s"%(arr[0][i]))
+                print("arr[1][i] after: %s"%(arr[1][i]))
+                print("\n")
+
+        # THIS IS NOT RECURSIVE B/C WE DO NOT TOUCH THE SECOND INDEX
+        # print("DEBUG: I'm zero-ing samples 1-8")
+        for j in range(2, samp_per_clock):
+            if decimate:
+                arr[j][i] = 0# DEBUG
+            else:
+                # print(a1)\
+                arr[j][i] +=  -1*(np.right_shift(a1*arr[j-1][i],14) + np.right_shift(a2*arr[j-2][i],14))
+                # arr[j][i] +=  -1*(a1*np.right_shift(arr_intermediate[j-1][i],13) + a2*np.right_shift(arr_intermediate[j-2][i],13))
+                # arr_intermediate[j][i] -= a1*np.right_shift(arr_intermediate[j-1][i],0) + a2*np.right_shift(arr_intermediate[j-2][i],0)
+                # arr[j][i] = (arr_intermediate[j][i])/(2**13)
+    # print(arr)
+    # now transpose arr and flatten
+    output = arr.transpose().reshape(-1) 
+    
+    return output 
 
 def manual_fir_pole_section_convert(coeffs, x, coeff_int, coeff_frac, data_int, data_frac, out_int=22, out_frac=26):
 

@@ -46,7 +46,8 @@ def test():
 # complementary cancelling zeros to move z^-1 to z^-samp_per_clock.
 # The way this works out is that it *breaks* the cross-coupling between the two final IIRs
 # (and the two FIRs when pipelining).
-def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
+def iir_biquad( ins , samp_per_clock, mag, angle, ics = None, debug=0):
+    ins = ins.copy()
     if ics is None:
         # Debugging
         #Lprint("No initial conditions!")
@@ -169,7 +170,8 @@ def iir_biquad( ins , samp_per_clock, mag, angle, ics = None ):
             # THIS IS THE ONLY RECURSIVE STEP
             arr[0][i] = C[0]*arr[0][i-2] + C[1]*arr[1][i-2] + F[i]
             arr[1][i] = C[2]*arr[0][i-2] + C[3]*arr[1][i-2] + G[i]
-
+            if debug >=1 and (abs(arr[0][i]) > 1 or abs(arr[1][i]) > 1):
+                print("Sample %d: F=%s, G=%s, arr[0][i-2]=%s, arr[1][i-2]=%s"%(i*8, F[i], G[i], arr[0][i-2], arr[1][i-2]))
         # THIS IS NOT RECURSIVE B/C WE DO NOT TOUCH THE SECOND INDEX
         for j in range(2, samp_per_clock):
             arr[j][i] += 2*mag*np.cos(angle)*arr[j-1][i] - pow(mag, 2)*arr[j-2][i]

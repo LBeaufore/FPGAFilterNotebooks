@@ -2,7 +2,7 @@ from IIRSim import *
 from FrequencyResponse import *
 import warnings
 
-def gen_gauss_noise(gauss_sample_num=10000*8, zero_pad=4, noise_size=205, counter=-1, out_format = "001_files/inputs/gauss_input_%d_sigma_hanning_clipped_%d.dat"):
+def gen_gauss_noise(gauss_sample_num=10000*8, zero_pad=4, noise_size=205, counter=-1, out_format = "scratch/gauss_input_%d_sigma_hanning_clipped_%d.dat"):
     """ Generate Gaussian noise with a Hanning window and optional zero padding on either side"""
     gauss_samps = np.random.normal(loc=0,scale=noise_size,size=gauss_sample_num)
     window = np.hanning(len(gauss_samps))
@@ -18,7 +18,7 @@ def gen_gauss_noise(gauss_sample_num=10000*8, zero_pad=4, noise_size=205, counte
             f.write("%d\n"%(samp))
     return gauss_samps_old
 
-def gen_pulse(pulse_sample_num=10000*8, zero_pad=4, impulse_size=205, counter=-1, out_format="001_files/inputs/pulse_input_height_%d_clipped.dat"):
+def gen_pulse(pulse_sample_num=10000*8, zero_pad=4, impulse_size=205, counter=-1, out_format="scratch/pulse_input_height_%d_clipped.dat"):
     """ Generate an impulse"""
     # pulse_samps = {}
     # pulse_samps_old = {}
@@ -38,7 +38,7 @@ def gen_pulse(pulse_sample_num=10000*8, zero_pad=4, impulse_size=205, counter=-1
             f.write("%d\n"%(samp))
     return pulse_samps_old
 
-def gen_tone(freq_MHz, n_samples=10000*8, zero_pad=4, amplitude=2**11, out_format="001_files/inputs/input_%d_MHz_%d_zpclocks_hanning.dat"):
+def gen_tone(freq_MHz, n_samples=10000*8, zero_pad=4, amplitude=2**11, out_format="scratch/input_%d_MHz_%d_zpclocks_hanning.dat"):
     """ Generate a tone"""
     FREQ_SAMPLE = 3000
     samps=quantized_sample_generator(freq_MHz/FREQ_SAMPLE, n_samples=n_samples, m=8, phase=0, in_amplitude=(amplitude/(2**11)))
