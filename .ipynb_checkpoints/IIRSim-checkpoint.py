@@ -650,8 +650,8 @@ def iir_biquad_run_fixed_point_extended(ins, coeffs, samp_per_clock=8, ics=None,
                                                                                                          arr_intermediate[1][i-2]))
             
             # if(F[i] != 0 or G[i] != 0):
-        arr[0][i] = np.right_shift(arr_intermediate[0][i],27+added_precision)
-        arr[1][i] = np.right_shift(arr_intermediate[1][i],27+added_precision)
+        arr[0][i] = np.right_shift(arr_intermediate[0][i],27+added_precision*2)
+        arr[1][i] = np.right_shift(arr_intermediate[1][i],27+added_precision*2)
         arr_intermediate[0][i] = np.right_shift(arr_intermediate[0][i],14+added_precision)#14
         arr_intermediate[1][i] = np.right_shift(arr_intermediate[1][i],14+added_precision)
 
@@ -679,7 +679,9 @@ def iir_biquad_run_fixed_point_extended(ins, coeffs, samp_per_clock=8, ics=None,
                 arr[j][i] = 0# DEBUG
             else:
                 # print(a1)\
-                arr[j][i] +=  -1*(np.right_shift(a1*arr[j-1][i],14) + np.right_shift(a2*arr[j-2][i],14))
+                # print(type(a1))
+                # print(type(arr[j-1][i]))
+                arr[j][i] +=  -1*(np.right_shift(a1*arr[j-1][i],14+added_precision) + np.right_shift(a2*arr[j-2][i],14+added_precision))
                 # arr[j][i] +=  -1*(a1*np.right_shift(arr_intermediate[j-1][i],13) + a2*np.right_shift(arr_intermediate[j-2][i],13))
                 # arr_intermediate[j][i] -= a1*np.right_shift(arr_intermediate[j-1][i],0) + a2*np.right_shift(arr_intermediate[j-2][i],0)
                 # arr[j][i] = (arr_intermediate[j][i])/(2**13)
