@@ -4,6 +4,15 @@ These notebooks simulate and interact with the PUEO FPGA implemented filters. Th
 ## 001_BiquadDebug.ipynb
 This notebook is for testing the behavior of the Biquad in the FPGA. It is by far most legible in JupyterLab or Jupyter 7. Open the table of contents. The core simulation code is stored in python modlues imported at the top, the notebook is largely for running these simluations and basic analysis.
 
+### Biquad Coeffs
+These can be precalculated, and then read in from a file.
+
+### Individual responses
+Plotting responses to individual inputs
+
+### Frequency response using gaussians
+This uses Prof. Jim Beatty's suggested gaussian noise input to check a frequency response of a system. This includes some active develoment investigating the effect of pole-zero cancellation on passband ripple.
+
 ## Simulation Modules
 ### iir_biquad.py
 This is nearly directly adapted from Dr. Patrick Allison's simulation. It mimics the PUEO biquad 8-fold pipelined, two clock clustered look ahead using floating point.
