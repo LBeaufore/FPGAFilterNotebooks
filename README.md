@@ -13,6 +13,9 @@ Plotting responses to individual inputs
 ### Frequency response using gaussians
 This uses Prof. Jim Beatty's suggested gaussian noise input to check a frequency response of a system. This includes some active develoment investigating the effect of pole-zero cancellation on passband ripple.
 
+### Verilog Testing
+This compares the python simulations to outputs from running a full simulation of the biquad as written in Verilog. This requires specific simulations in verilog that uses edited submodules (which can be a pain in our workflow). Just in case someone wants to recreate my simulations instead of using the existing output, I have included the relevant changed files in this repository under the verilog/ directory.
+
 ## Simulation Modules
 ### iir_biquad.py
 This is nearly directly adapted from Dr. Patrick Allison's simulation. It mimics the PUEO biquad 8-fold pipelined, two clock clustered look ahead using floating point.
