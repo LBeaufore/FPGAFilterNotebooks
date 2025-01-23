@@ -155,7 +155,7 @@ def get_F_G_coefficients(samp_per_clock, mag, angle):
     return np.array([D_FF, D_FG, E_GF, E_GG])
 
 # Adapted from https://github.com/barawn/pueo-dsp-python/tree/main/dsp. It is not tracked because I don't want to set up a submodule right now
-def iir_biquad_coeffs(mag, angle, samp_per_clock=8):
+def iir_biquad_coeffs(mag, angle, zero_angle=None, samp_per_clock=8):
     # Calculate the f and g fir coefficients, using the angle of the notch, the samples
     f_fir = get_f_coeffs(samp_per_clock, mag, angle)
     g_fir = get_g_coeffs(samp_per_clock, mag, angle)
