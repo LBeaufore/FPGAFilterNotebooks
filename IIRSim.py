@@ -6,6 +6,7 @@ import scipy
 import math
 from scipy.special import eval_chebyu
 
+
 def import_data_dep(file_loc, truncate=True, debug = False):
     captured_data = np.load(file_loc)
     input0_offset=np.argmax((np.abs(captured_data[0])>0).astype(int))

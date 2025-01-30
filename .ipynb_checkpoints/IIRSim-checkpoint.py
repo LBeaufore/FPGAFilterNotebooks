@@ -6,6 +6,180 @@ import scipy
 import math
 from scipy.special import eval_chebyu
 
+def get_coeffs(filename):
+    """ Read in coefficients for biquad from a file"""
+    # notch_freq = 350
+    # Q_FACTOR = 5
+    
+    # Assuming 8 samples per clock
+    samp_per_clock=8
+    coeffs_fixed_point_signed = np.zeros(2*samp_per_clock-3 + 4 + 4, dtype=np.int64) # 21
+    b_fixed_point_signed = np.zeros(3, dtype=np.int64)
+    a_fixed_point_signed = np.zeros(3, dtype=np.int64)
+    b_fixed_point_signed_all = np.zeros(3, dtype=np.int64)
+    a_fixed_point_signed_all = np.zeros(3, dtype=np.int64)
+    C = np.zeros(4)
+    f_fir = np.zeros(6)
+    g_fir = np.zeros(7)
+    
+    #with open("001_files/coefficients/coeff_file_%sMHz_%s.dat"%(notch_freq,Q_FACTOR),"r") as coeff_file:
+    with open(filename,"r") as coeff_file:
+        coeff_list = []
+        for line in coeff_file:
+            coeff_value = int(line.strip())
+            coeff_list.append(coeff_value)
+        
+    b_fixed_point_signed[1] = coeff_list[0] # B
+    b_fixed_point_signed[0] = coeff_list[1] # A
+    b_fixed_point_signed[2] = coeff_list[1] # A (again, we assume)
+    
+    C[2] = coeff_list[2]#coeff_file.write("%d\n"%(int(C[2])))# C2
+    C[3] = coeff_list[3]#coeff_file.write("%d\n"%(int(C[3])))# C3
+    C[1] = coeff_list[4]#coeff_file.write("%d\n"%(int(C[1])))# C1
+    C[0] = coeff_list[5]#coeff_file.write("%d\n"%(int(C[0])))# C0
+    
+    a_fixed_point_signed[2] = coeff_list[6]#coeff_file.write("%d\n"%(int(a_fixed_point_signed[2])))# a2'
+    a_fixed_point_signed[1] = coeff_list[7]#coeff_file.write("%d\n"%(int(a_fixed_point_signed[1])))# a1'        
+    
+    D_FF = coeff_list[8]#coeff_file.write("%d\n"%(int(D_FF)))# D_FF
+    f_fir[5] = coeff_list[9]# X6
+    f_fir[4] = coeff_list[10]# X5
+    f_fir[3] = coeff_list[11]# X4
+    f_fir[2] = coeff_list[12]# X3
+    f_fir[1] = coeff_list[13]# X2
+    f_fir[0] = coeff_list[14]# X1
+    
+    E_GG = coeff_list[15]# E_GG
+    g_fir[6] = coeff_list[16]# X7
+    g_fir[5] = coeff_list[17]# X6
+    g_fir[4] = coeff_list[18]# X5
+    g_fir[3] = coeff_list[19]# X4
+    g_fir[2] = coeff_list[20]# X3
+    g_fir[1] = coeff_list[21]# X2
+    g_fir[0] = coeff_list[22]# X1
+    
+    D_FG = coeff_list[23] # D_FG
+    
+    E_GF = coeff_list[24] # E_GF
+    
+    a_fixed_point_signed_all[0] = coeff_list[25]
+    a_fixed_point_signed_all[1] = coeff_list[26]
+    a_fixed_point_signed_all[2] = coeff_list[27]
+    b_fixed_point_signed_all[0] = coeff_list[28]
+    b_fixed_point_signed_all[1] = coeff_list[29]
+    b_fixed_point_signed_all[2] = coeff_list[30]
+    
+    coeffs_fixed_point_signed[0:samp_per_clock-2] = f_fir
+    coeffs_fixed_point_signed[samp_per_clock-2:2*samp_per_clock-3] = g_fir
+    coeffs_fixed_point_signed[2*samp_per_clock-3 + 0] = D_FF
+    coeffs_fixed_point_signed[2*samp_per_clock-3 + 1] = D_FG
+    coeffs_fixed_point_signed[2*samp_per_clock-3 + 2] = E_GF
+    coeffs_fixed_point_signed[2*samp_per_clock-3 + 3] = E_GG
+    coeffs_fixed_point_signed[2*samp_per_clock-3 + 4:2*samp_per_clock-3 + 4 + 4] = C
+    return coeffs_fixed_point_signed, a_fixed_point_signed_all, b_fixed_point_signed_all
+
+
+def write_coeffs(notch_freq, q_factor, added_precision=0, file_prefix="001_files/coefficients/coeff_file"):
+    """Write out the BQ coefficients to a file"""
+    b, a = signal.iirnotch(notch_freq, q_factor, 3000)
+    pole = signal.tf2zpk(b,a)[1][0]
+    zero = signal.tf2zpk(b,a)[0][0]
+    pmag=np.abs(pole)
+    pangle=np.angle(pole)
+    zmag=np.abs(zero)
+    zangle=np.angle(zero)
+    
+    # Get the coefficients for the quantized biquad
+    coeffs = iir_biquad_coeffs(pmag, pangle)
+    coeffs_fixed_point = np.zeros(len(coeffs), dtype=np.int64)
+    coeffs_fixed_point_signed = np.zeros(len(coeffs), dtype=np.int64)
+    b_fixed_point_signed = np.zeros(len(b))
+    a_fixed_point_signed = np.zeros(len(a))
+    
+    coeffs_fixed_point_extended = np.zeros(len(coeffs), dtype=np.int64)
+    coeffs_fixed_point_signed_extended = np.zeros(len(coeffs), dtype=np.int64)
+    b_fixed_point_signed_extended = np.zeros(len(b))
+    a_fixed_point_signed_extended = np.zeros(len(a))
+    
+    ## Usual Fixed Point
+    # For transfer function numerator
+    for i in range(len(b)):
+        b_fixed_point_signed[i] = np.floor(b[i] * (2**14))
+    b_fixed_point_signed = np.array(b_fixed_point_signed, dtype=np.int64)
+    # Just in case we want to compare these later
+    # For transfer function denominator, after look-ahead
+    for i in range(len(a)):
+        a_fixed_point_signed[i] = np.floor(a[i] * (2**14))
+    a_fixed_point_signed = np.array(a_fixed_point_signed, dtype=np.int64)
+    #  For clustered look-ahead
+    for i in range(len(coeffs_fixed_point)):
+        # Coefficients are in Q4.14, where the sign bit IS counted
+        coeffs_fixed_point_signed[i] = np.floor(coeffs[i] * (2**14))
+    
+    coeffs_fixed_point_signed = np.array(coeffs_fixed_point_signed, dtype=np.int64)
+    
+    ## Extended Fixed Point
+    # For transfer function numerator
+    for i in range(len(b)):
+        b_fixed_point_signed_extended[i] = np.floor(b[i] * (2**(14+added_precision)))
+    # Just in case we want to compare these later
+    # For transfer function denominator, after look-ahead
+    for i in range(len(a)):
+        a_fixed_point_signed_extended[i] = np.floor(a[i] * (2**(14+added_precision)))
+    #  For clustered look-ahead
+    for i in range(len(coeffs_fixed_point)):
+        # Coefficients are in Q4.14, where the sign bit IS counted
+        coeffs_fixed_point_signed_extended[i] = np.floor(coeffs[i] * (2**(14+added_precision)))
+
+    
+    samp_per_clock=8
+    f_fir = coeffs_fixed_point_signed[0:samp_per_clock-2]
+    g_fir = coeffs_fixed_point_signed[samp_per_clock-2:2*samp_per_clock-3]
+    D_FF = coeffs_fixed_point_signed[2*samp_per_clock-3 + 0]
+    D_FG = coeffs_fixed_point_signed[2*samp_per_clock-3 + 1]
+    E_GF = coeffs_fixed_point_signed[2*samp_per_clock-3 + 2]
+    E_GG = coeffs_fixed_point_signed[2*samp_per_clock-3 + 3]
+    C = coeffs_fixed_point_signed[2*samp_per_clock-3 + 4:2*samp_per_clock-3 + 4 + 4]
+
+    
+    with open("%s_%sMHz_%s.dat"%(file_prefix, notch_freq,Q_FACTOR),"w") as coeff_file:
+        coeff_file.write("%d\n"%(int(b_fixed_point_signed[1])))# B
+        coeff_file.write("%d\n"%(int(b_fixed_point_signed[0])))# A
+
+        coeff_file.write("%d\n"%(int(C[2])))# C2
+        coeff_file.write("%d\n"%(int(C[3])))# C3
+        coeff_file.write("%d\n"%(int(C[1])))# C1
+        coeff_file.write("%d\n"%(int(C[0])))# C0
+
+        coeff_file.write("%d\n"%(int(a_fixed_point_signed[2])))# a2'
+        coeff_file.write("%d\n"%(int(a_fixed_point_signed[1])))# a1'        
+
+        coeff_file.write("%d\n"%(int(D_FF)))# D_FF
+        coeff_file.write("%d\n"%(int(f_fir[5])))# X6
+        coeff_file.write("%d\n"%(int(f_fir[4])))# X5
+        coeff_file.write("%d\n"%(int(f_fir[3])))# X4
+        coeff_file.write("%d\n"%(int(f_fir[2])))# X3
+        coeff_file.write("%d\n"%(int(f_fir[1])))# X2
+        coeff_file.write("%d\n"%(int(f_fir[0])))# X1
+
+        coeff_file.write("%d\n"%(int(E_GG)))# E_GG
+        coeff_file.write("%d\n"%(int(g_fir[6])))# X7
+        coeff_file.write("%d\n"%(int(g_fir[5])))# X6
+        coeff_file.write("%d\n"%(int(g_fir[4])))# X5
+        coeff_file.write("%d\n"%(int(g_fir[3])))# X4
+        coeff_file.write("%d\n"%(int(g_fir[2])))# X3
+        coeff_file.write("%d\n"%(int(g_fir[1])))# X2
+        coeff_file.write("%d\n"%(int(g_fir[0])))# X1
+        
+        coeff_file.write("%d\n"%(int(D_FG)))# D_FG
+        
+        coeff_file.write("%d\n"%(int(E_GF)))# E_GF
+
+        for a_i in a_fixed_point_signed:
+            coeff_file.write("%d\n"%(int(a_i)))
+        for b_i in b_fixed_point_signed:
+            coeff_file.write("%d\n"%(int(b_i)))
+
 def import_data_dep(file_loc, truncate=True, debug = False):
     captured_data = np.load(file_loc)
     input0_offset=np.argmax((np.abs(captured_data[0])>0).astype(int))
