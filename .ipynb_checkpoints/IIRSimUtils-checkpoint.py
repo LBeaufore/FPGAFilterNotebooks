@@ -148,7 +148,7 @@ def write_coeffs(notch_freq, q_factor, added_precision=0, file_prefix="001_files
     C = coeffs_fixed_point_signed[2*samp_per_clock-3 + 4:2*samp_per_clock-3 + 4 + 4]
 
     
-    with open("%s_%sMHz_%s.dat"%(file_prefix, notch_freq,Q_FACTOR),"w") as coeff_file:
+    with open("%s_%sMHz_%s.dat"%(file_prefix, notch_freq,q_factor),"w") as coeff_file:
         coeff_file.write("%d\n"%(int(b_fixed_point_signed[1])))# B
         coeff_file.write("%d\n"%(int(b_fixed_point_signed[0])))# A
 
@@ -157,8 +157,8 @@ def write_coeffs(notch_freq, q_factor, added_precision=0, file_prefix="001_files
         coeff_file.write("%d\n"%(int(C[1])))# C1
         coeff_file.write("%d\n"%(int(C[0])))# C0
 
-        coeff_file.write("%d\n"%(int(a_fixed_point_signed[2])))# a2'
-        coeff_file.write("%d\n"%(int(a_fixed_point_signed[1])))# a1'        
+        coeff_file.write("%d\n"%(-1*int(a_fixed_point_signed[1])))# a1'
+        coeff_file.write("%d\n"%(-1*int(a_fixed_point_signed[2])))# a2'        
 
         coeff_file.write("%d\n"%(int(D_FF)))# D_FF
         coeff_file.write("%d\n"%(int(f_fir[5])))# X6
