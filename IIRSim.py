@@ -133,16 +133,16 @@ def manual_fir_section_convert(coeffs, x, coeff_int, coeff_frac, data_int, data_
         y=np.zeros(len(x))
     return x
 
-def get_f_coeffs(samp_per_clock, mag, angle):
+def get_f_coeffs(samp_per_clock, mag, angle): # CHANGED 2/17
     f_fir = [0]*(samp_per_clock-2)
     for i in range(0, samp_per_clock-2):
-        f_fir[i] = pow(mag, i)*eval_chebyu(i,np.cos(angle) )
+        f_fir[i] = pow(mag, i+1)*eval_chebyu(i+1,np.cos(angle) )
     return f_fir
 
-def get_g_coeffs(samp_per_clock, mag, angle):
+def get_g_coeffs(samp_per_clock, mag, angle): # CHANGED 2/17
     g_fir = [0]*(samp_per_clock-1)
     for i in range(0, samp_per_clock-1):
-        g_fir[i] = pow(mag, i)*eval_chebyu(i,np.cos(angle) )
+        g_fir[i] = pow(mag, i+1)*eval_chebyu(i+1,np.cos(angle) )
     return g_fir
 
 def get_F_G_coefficients(samp_per_clock, mag, angle):
