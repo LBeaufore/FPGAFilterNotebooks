@@ -533,7 +533,7 @@ def gaussian_probe_frequency_response_manual(trials, A, B, pmag, pangle, smooth=
     plt.show()
 
 
-def frequency_response_manual(clocks, input_data, output_data, smooth=1, savename=None, lfilter_coeffs=None, SAMPLE_FREQ=3000):
+def frequency_response_manual(clocks, input_data, output_data, smooth=1, savename=None, lfilter_coeffs=None, SAMPLE_FREQ=3000, show=True):
     """Plot the frequency response for (more) arbitrary data"""
     TRIALS = len(input_data)
     data_len = len(input_data[0])
@@ -555,33 +555,38 @@ def frequency_response_manual(clocks, input_data, output_data, smooth=1, savenam
         
         fft_input_results[i] = np.abs(np.fft.fft(input_data[i]))**2   
         fft_output_results[i] = np.abs(np.fft.fft(output_data[i]))**2
-        fft_lfilter_results[i] = np.abs(np.fft.fft(lfilter_data))**2
+        if(not (lfilter_coeffs is None)):
+            fft_lfilter_results[i] = np.abs(np.fft.fft(lfilter_data))**2
 
     
     fft_input_result = np.mean(fft_input_results, axis=0)
     fft_output_result = np.mean(fft_output_results, axis=0)
-    fft_lfilter_result = np.mean(fft_lfilter_results, axis=0)
+    if(not (lfilter_coeffs is None)):
+        fft_lfilter_result = np.mean(fft_lfilter_results, axis=0)
 
     
     mean_power = np.mean(fft_input_result)
+    # print(mean_power)
 
     # Plotting
-    print(fft_input_result)    
-    print( SAMPLE_FREQ*np.fft.fftfreq(len(fft_input_result)))
+    # print(fft_input_result)    
+    # print( SAMPLE_FREQ*np.fft.fftfreq(len(fft_input_result)))
     plot_frequencies = SAMPLE_FREQ*np.fft.fftfreq(len(fft_input_result))[int(np.floor(smooth/2.0)):int(-np.floor(smooth/2.0))]
-    print(plot_frequencies)
+    # print(plot_frequencies)
     
     fig = plt.figure()
     gs = matplotlib.gridspec.GridSpec(2, 1, height_ratios=[2, 1]) 
     ax0 = plt.subplot(gs[0])
-    lfilter_line, = ax0.plot(plot_frequencies,np.convolve(np.abs(fft_lfilter_result),  np.ones(smooth)/smooth, mode='valid')/mean_power, 
-                            linestyle="None", marker=".", markersize=1, alpha=0.8, color="C0")
-    ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C0", label="Theory (lfilter)")
-
+ 
+    if(not (lfilter_coeffs is None)):
+        lfilter_line, = ax0.plot(plot_frequencies,np.convolve(np.abs(fft_lfilter_result),  np.ones(smooth)/smooth, mode='valid')/mean_power, 
+                                linestyle="None", marker=".", markersize=1, alpha=0.8, color="C0")
+        ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C0", label="Theory (lfilter)")
+    
     output_line, = ax0.plot(plot_frequencies,np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid')/mean_power, 
                             linestyle="None", marker=".", markersize=1, alpha=0.8, color="C1")
     ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C1", label="Output")
-
+   
     # lfilter_line, = ax0.plot(plot_frequencies,np.convolve(np.abs(fft_python_result),  np.ones(smooth)/smooth, mode='valid')/mean_power, 
     #                         linestyle="None", marker=".", markersize=1, alpha=0.8, color="C2")
     # ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C2", label="Fixed Point CLA")
@@ -603,29 +608,32 @@ def frequency_response_manual(clocks, input_data, output_data, smooth=1, savenam
     yticks0[-1].label1.set_visible(False)
 
     
-    ax1 = plt.subplot(gs[1], sharex = ax0)
-    # diff_line, = ax1.plot(plot_frequencies,(np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid') - np.convolve(np.abs(fft_patrick_result),  np.ones(smooth)/smooth, mode='valid'))/mean_power, linestyle="None", 
-    #                      marker=".", markersize=5, alpha=0.8, color="C3")
-    # ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C3", label="Fixed - Floating")
-    diff_line_2, = ax1.plot(plot_frequencies,(np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid') - np.convolve(np.abs(fft_lfilter_result),  np.ones(smooth)/smooth, mode='valid'))/mean_power, linestyle="None", 
-                     marker=".", markersize=5, alpha=0.8, color="C4")
-    ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C4", label="Output - Theory")
-    if(SAMPLE_FREQ > 1):
-        ax1.set_xlabel("Freq (MHz)")
-    else:
-        ax1.set_xlabel("Frequency/(Sampling Frequency)")
-    
+    if(not (lfilter_coeffs is None)):
+        ax1 = plt.subplot(gs[1], sharex = ax0)
+        # diff_line, = ax1.plot(plot_frequencies,(np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid') - np.convolve(np.abs(fft_patrick_result),  np.ones(smooth)/smooth, mode='valid'))/mean_power, linestyle="None", 
+        #                      marker=".", markersize=5, alpha=0.8, color="C3")
+        # ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C3", label="Fixed - Floating")
+        diff_line_2, = ax1.plot(plot_frequencies,(np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid') - np.convolve(np.abs(fft_lfilter_result),  np.ones(smooth)/smooth, mode='valid'))/mean_power, linestyle="None", 
+                         marker=".", markersize=5, alpha=0.8, color="C4")
+        ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C4", label="Output - Theory")
+        if(SAMPLE_FREQ > 1):
+            ax1.set_xlabel("Freq (MHz)")
+        else:
+            ax1.set_xlabel("Frequency/(Sampling Frequency)")
+            
+        ax1.legend(bbox_to_anchor=(1.04,1))
+        
     # yticks = ax1.yaxis.get_major_ticks()
     # yticks[0].label1.set_visible(False)
     # ax1.set_xticks(ax1.get_xticks()[0:-1])
     # ax0.legend((lfilter_line, float_line, fixed_line, diff_line, diff_line_2), ("lfilter (theory)", "floating point", "fixed", "fixed - float", "fixed - lfilter"), bbox_to_anchor=(1.04,1))
     ax0.legend(bbox_to_anchor=(1.04,1))
-    ax1.legend(bbox_to_anchor=(1.04,1))
-    if(not savename is None):
-        plt.savefig(savename + ".png", bbox_inches='tight')
-    
     plt.subplots_adjust(hspace=.0)
-    plt.show()
+    if(not savename is None):
+        plt.savefig(savename + ".png", bbox_inches='tight', dpi=300)
+    
+    if(show):
+        plt.show()
     
     # plt.clf()
     # fig = plt.figure(num='Biquad CLA Cancels',figsize=(10,4.8))
@@ -648,3 +656,108 @@ def frequency_response_manual(clocks, input_data, output_data, smooth=1, savenam
     # if(not savename is None):
     #     plt.savefig(savename + "_polezero.png", bbox_inches='tight')
     # plt.show()
+
+def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, savename=None, lfilter_coeffs=None, SAMPLE_FREQ=3000, show=True, title=None, diffscale=None):
+    """Plot the frequency response for (more) arbitrary data"""
+    TRIALS = len(input_data)
+    data_len = len(input_data[0])
+    
+    fft_input_results = np.zeros((TRIALS, data_len))     
+    fft_output_results = np.zeros((TRIALS, data_len))    
+    if(not (lfilter_coeffs is None)):
+        fft_lfilter_results = np.zeros((TRIALS, data_len))
+        b = lfilter_coeffs[0]
+        a = lfilter_coeffs[1]
+    
+    # Run the trials on the data
+    for i in range(TRIALS):
+        # Import the trial inputs
+        
+        if(not (lfilter_coeffs is None)):
+            lfilter_data = lfilter(b,a,input_data[i])
+
+        
+        fft_input_results[i] = np.abs(np.fft.fft(input_data[i]))**2   
+        fft_output_results[i] = np.abs(np.fft.fft(output_data[i]))**2
+        if(not (lfilter_coeffs is None)):
+            fft_lfilter_results[i] = np.abs(np.fft.fft(lfilter_data))**2
+
+    
+    fft_input_result = np.mean(fft_input_results, axis=0)
+    fft_output_result = np.mean(fft_output_results, axis=0)
+    if(not (lfilter_coeffs is None)):
+        fft_lfilter_result = np.mean(fft_lfilter_results, axis=0)
+
+    
+    # mean_power = np.mean(fft_input_result)
+   
+    # Plotting
+    # print(fft_input_result)    
+    # print( SAMPLE_FREQ*np.fft.fftfreq(len(fft_input_result)))
+    plot_frequencies = SAMPLE_FREQ*np.fft.fftfreq(len(fft_input_result))[int(np.floor(smooth/2.0)):int(-np.floor(smooth/2.0))]
+    # print(plot_frequencies)
+    
+    fig = plt.figure()
+    gs = matplotlib.gridspec.GridSpec(2, 1, height_ratios=[2, 1]) 
+    ax0 = plt.subplot(gs[0])
+ 
+    if(not (lfilter_coeffs is None)):
+        lfilter_ratios = np.convolve(np.divide(np.abs(fft_lfilter_result), np.abs(fft_input_result)),  np.ones(smooth)/smooth, mode='valid')
+        lfilter_db = 10*np.log10(lfilter_ratios)
+        lfilter_line, = ax0.plot(plot_frequencies,lfilter_db, 
+                                linestyle="None", marker=".", markersize=1, alpha=0.8, color="C0")
+        ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C0", label="Theory (lfilter)")
+
+    output_ratios = np.convolve(np.divide(np.abs(fft_output_result), np.abs(fft_input_result)),  np.ones(smooth)/smooth, mode='valid')
+    output_db = 10*np.log10(output_ratios)
+    output_line, = ax0.plot(plot_frequencies,output_db, 
+                            linestyle="None", marker=".", markersize=1, alpha=0.8, color="C1")
+    ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C1", label="Output")
+   
+    # ax0.set_yscale("log")
+    ax0.set_ylim(-30,5)
+    ax0.set_xlim(SAMPLE_FREQ*-0.51,SAMPLE_FREQ*0.51)
+    
+    plt.setp(ax0.get_xticklabels(), visible=False)
+    ax0.set_ylabel("Gain (dB)")
+    if(title is None):
+        ax0.set_title("Frequency Response")
+    else:
+        ax0.set_title(title)
+    yticks0 = ax0.yaxis.get_major_ticks()
+    yticks0[-1].label1.set_visible(False)
+
+    ax0.grid(alpha=0.5)
+
+    
+    if(not (lfilter_coeffs is None)):
+        ax1 = plt.subplot(gs[1], sharex = ax0)
+        # diff_line, = ax1.plot(plot_frequencies,(np.convolve(np.abs(fft_output_result), np.ones(smooth)/smooth, mode='valid') - np.convolve(np.abs(fft_patrick_result),  np.ones(smooth)/smooth, mode='valid'))/mean_power, linestyle="None", 
+        #                      marker=".", markersize=5, alpha=0.8, color="C3")
+        # ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C3", label="Fixed - Floating")
+        diff_line_2, = ax1.plot(plot_frequencies,output_db - lfilter_db, linestyle="None", 
+                         marker=".", markersize=5, alpha=0.8, color="C4")
+        ax1.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C4", label="Output - Theory")
+        ax1.set_ylabel(r'$\Delta$dB')
+        if(SAMPLE_FREQ > 1):
+            ax1.set_xlabel("Freq (MHz)")
+        else:
+            ax1.set_xlabel("Frequency/(Sampling Frequency)")
+            
+        ax1.legend(bbox_to_anchor=(1.35,1), loc="upper right")
+        ax1.grid(alpha=0.5)
+        if(not diffscale is None):
+            ax1.set_ylim(-1,diffscale)
+        
+    # yticks = ax1.yaxis.get_major_ticks()
+    # yticks[0].label1.set_visible(False)
+    # ax1.set_xticks(ax1.get_xticks()[0:-1])
+    # ax0.legend((lfilter_line, float_line, fixed_line, diff_line, diff_line_2), ("lfilter (theory)", "floating point", "fixed", "fixed - float", "fixed - lfilter"), bbox_to_anchor=(1.04,1))
+    ax0.legend(bbox_to_anchor=(1.35,1), loc="upper right")
+    plt.subplots_adjust(hspace=.05)
+    if(not savename is None):
+        plt.savefig(savename + ".png", bbox_inches='tight', dpi=300)
+    
+    if(show):
+        plt.show()
+    
