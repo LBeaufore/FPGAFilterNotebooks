@@ -715,7 +715,7 @@ def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, save
     ax0.plot([],[],         linestyle="None", marker=".", markersize=8, alpha=0.8, color="C1", label="Output")
    
     # ax0.set_yscale("log")
-    ax0.set_ylim(-30,5)
+    ax0.set_ylim(-30,30)
     ax0.set_xlim(SAMPLE_FREQ*-0.51,SAMPLE_FREQ*0.51)
     
     plt.setp(ax0.get_xticklabels(), visible=False)
