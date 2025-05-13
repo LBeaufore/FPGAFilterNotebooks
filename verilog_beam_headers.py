@@ -30,6 +30,8 @@ def convert_beams_to_verilog_arrays(infilename = "L1Beams.csv", outfilename = "L
             for antenna_idx in range(8):
                 antenna_maxes[antenna_idx] = 0
             headerline = next(infile) # Might use in future version
+            outfile.write("`define BEAM_ANTENNA_DELAYS '{ ")
+            first=True
             for beam_idx, line in enumerate(infile):
                 line = line.strip().split(",")
                 try:
@@ -37,18 +39,28 @@ def convert_beams_to_verilog_arrays(infilename = "L1Beams.csv", outfilename = "L
                     azimuth = float(line[1])
                 except Exception as ValueError:
                     break
+                # Making it here means there is data
+                if(not first):
+                   outfile.write(", ")
+                else:
+                    first = False
                 delays = []
-                outfile.write("`define BEAM_{:d}_ANTENNA_DELAYS {{ ".format(beam_idx))
+                outfile.write("'{")
                 for antenna_idx in range(8):
                     delay = int(line[antenna_idx+2])
                     if antenna_maxes[antenna_idx] < delay:
                         antenna_maxes[antenna_idx] = delay
-                    outfile.write("{:d} ".format(delay))
-                outfile.write("}\n")
+                    outfile.write("{:d}".format(delay))
+                    if(antenna_idx != 7):
+                        outfile.write(",")
+                    # outfile.write(" ")
+                outfile.write("}")
+            outfile.write(" }\n")
+            outfile.write("`define BEAM_TOTAL {:d}\n".format(beam_idx))
             if not lead_antennas is None:
                 for antenna_idx in lead_antennas:
                     outfile.write("`define MAX_ANTENNA_DELAY_{:d} {:d}\n".format(antenna_idx, antenna_maxes[antenna_idx]))
             else:
                  for antenna_idx in range(8):
                     outfile.write("`define MAX_ANTENNA_DELAY_{:d} {:d}\n".format(antenna_idx, antenna_maxes[antenna_idx]))
-            print("Wrote out {:d} beams to \"{:s}\"".format(beam_idx-1, outfilename))
+            print("Wrote out {:d} beams to \"{:s}\"".format(beam_idx, outfilename))
