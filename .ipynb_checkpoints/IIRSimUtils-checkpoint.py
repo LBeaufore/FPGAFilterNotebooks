@@ -657,7 +657,7 @@ def frequency_response_manual(clocks, input_data, output_data, smooth=1, savenam
     #     plt.savefig(savename + "_polezero.png", bbox_inches='tight')
     # plt.show()
 
-def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, savename=None, lfilter_coeffs=None, SAMPLE_FREQ=3000, show=True, title=None, diffscale=None, yscale = (-30,30)):
+def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, savename=None, lfilter_coeffs=None, SAMPLE_FREQ=3000, show=True, title=None, diffscale=None, yscale = (-30,30), halfscale=False):
     """Plot the frequency response for (more) arbitrary data"""
     TRIALS = len(input_data)
     data_len = len(input_data[0])
@@ -716,9 +716,12 @@ def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, save
    
     # ax0.set_yscale("log")
     ax0.set_ylim(yscale[0],yscale[1])
-    ax0.set_xlim(SAMPLE_FREQ*-0.51,SAMPLE_FREQ*0.51)
+    if(halfscale):
+        ax0.set_xlim(0,SAMPLE_FREQ*0.51)
+    else:
+        ax0.set_xlim(SAMPLE_FREQ*-0.51,SAMPLE_FREQ*0.51)
     
-    plt.setp(ax0.get_xticklabels(), visible=False)
+    plt.setp(ax0.get_xticklabels(), visible= ( lfilter_coeffs is None ))
     ax0.set_ylabel("Gain (dB)")
     if(title is None):
         ax0.set_title("Frequency Response")
@@ -748,6 +751,11 @@ def frequency_response_manual_v2(clocks, input_data, output_data, smooth=1, save
         ax1.grid(alpha=0.5)
         if(not diffscale is None):
             ax1.set_ylim(-1,diffscale)
+    else:
+        if(SAMPLE_FREQ > 1):
+            ax0.set_xlabel("Freq (MHz)")
+        else:
+            ax0.set_xlabel("Frequency/(Sampling Frequency)")
         
     # yticks = ax1.yaxis.get_major_ticks()
     # yticks[0].label1.set_visible(False)

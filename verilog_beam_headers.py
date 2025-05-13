@@ -22,3 +22,33 @@ def convert_beams_to_verilog(infilename = "L1Beams.csv", outfilename = "L1Beams_
             for antenna_idx in lead_antennas:
                 outfile.write("`define MAX_ANTENNA_DELAY_{:d} {:d}\n".format(antenna_idx, antenna_maxes[antenna_idx]))
             print("Wrote out {:d} beams to \"{:s}\"".format(beam_idx-1, outfilename))
+
+def convert_beams_to_verilog_arrays(infilename = "L1Beams.csv", outfilename = "L1Beams_header.vh", lead_antennas = None):
+    with open(infilename, "r") as infile:
+        with open(outfilename, "w") as outfile:
+            antenna_maxes = {}
+            for antenna_idx in range(8):
+                antenna_maxes[antenna_idx] = 0
+            headerline = next(infile) # Might use in future version
+            for beam_idx, line in enumerate(infile):
+                line = line.strip().split(",")
+                try:
+                    elevation = float(line[0])
+                    azimuth = float(line[1])
+                except Exception as ValueError:
+                    break
+                delays = []
+                outfile.write("`define BEAM_{:d}_ANTENNA_DELAYS {{ ".format(beam_idx))
+                for antenna_idx in range(8):
+                    delay = int(line[antenna_idx+2])
+                    if antenna_maxes[antenna_idx] < delay:
+                        antenna_maxes[antenna_idx] = delay
+                    outfile.write("{:d} ".format(delay))
+                outfile.write("}\n")
+            if not lead_antennas is None:
+                for antenna_idx in lead_antennas:
+                    outfile.write("`define MAX_ANTENNA_DELAY_{:d} {:d}\n".format(antenna_idx, antenna_maxes[antenna_idx]))
+            else:
+                 for antenna_idx in range(8):
+                    outfile.write("`define MAX_ANTENNA_DELAY_{:d} {:d}\n".format(antenna_idx, antenna_maxes[antenna_idx]))
+            print("Wrote out {:d} beams to \"{:s}\"".format(beam_idx-1, outfilename))
